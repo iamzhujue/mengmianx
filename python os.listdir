@@ -2,6 +2,6 @@ os.listdir()方法用于返回指定的文件夹包含的文件或文件夹的�
 
 import os,sys
 path = 'C:\Python381\Exercise0.0'
-dirs = listdir(path)
+dirs = os.listdir(path)
 for file in dirs:
     print(file)
