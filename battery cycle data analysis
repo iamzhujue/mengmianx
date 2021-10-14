@@ -1,0 +1,139 @@
+# -*- coding: utf-8 -*-
+import pandas as pd
+import os
+import matplotlib.pyplot as plt
+import warnings
+
+path_in = r'D:\Research\02 编程练习\tips\ceshiyongli'
+path_out = r'D:\Research\02 编程练习\tips\result'
+
+def get_file(path_in):
+    dirs = os.listdir(path_in)
+    files = []
+    for file in dirs:
+        path = path_in + '\\' + file
+        files.append(path)
+    return files
+    
+def get_data(filepath):
+    
+    with warnings.catch_warnings(record=True):      
+        warnings.simplefilter("always")         
+        xls_file = pd.ExcelFile(filepath, engine='openpyxl')    # there is an ugly waring -_-!
+        
+    serial_num = xls_file.parse('test').iloc[4, 8]
+    print('--SES--','Cell:' + serial_num)
+    data_cycle = xls_file.parse('cycle')        #dataframe      
+    cycle_num = data_cycle.loc[:,'循环号']          
+    df_capacity_dis = data_cycle.loc[:, '放电容量(mAh)']
+    df_capacity_dis_0 = df_capacity_dis.copy()              #do not modify it
+    if df_capacity_dis_0.iloc[len(df_capacity_dis_0)-1] == 0.:
+        df_capacity_dis_0.iloc[len(df_capacity_dis_0)-1] =None    
+    
+    df_capacity_dis = df_capacity_dis_0 
+    
+    df_capacity_chr = data_cycle.loc[:, '充电容量(mAh)']
+    df_energy_dis = data_cycle.loc[:, '放电能量(Wh)']
+    df_CE = data_cycle.loc[:, '充放电效率(%)']
+    df_retention_dis = data_cycle.loc[:, '放电容量衰减率(%)']
+    df_Voltage_dis = [] 
+    for i in range(len(df_capacity_dis)):
+        df_Voltage_dis.append(data_cycle.loc[:,'放电能量(Wh)'][i]/df_capacity_dis[i]*1000)       
+    
+    capacity_dis = pd.DataFrame({serial_num : df_capacity_dis} )
+    capacity_chr = pd.DataFrame({serial_num : df_capacity_chr})
+    energy_dis = pd.DataFrame({serial_num : df_energy_dis})
+    CE= pd.DataFrame({serial_num : df_CE})
+    Voltage_dis = pd.DataFrame({ serial_num : df_Voltage_dis})       
+    retention_dis = pd.DataFrame({ serial_num : df_retention_dis}) 
+    
+    return capacity_dis, capacity_chr, energy_dis, CE, Voltage_dis, cycle_num, retention_dis
+    
+def get_curve(filepath):
+    print('--SES--', 'Drawing Voltage-Capacity curve...')
+    with warnings.catch_warnings(record=True):      # there is an ugly waring -_-!
+        warnings.simplefilter("always")         
+        xls_file = pd.ExcelFile(filepath, engine='openpyxl')
+    
+    serial_num = xls_file.parse('test').iloc[4, 8]
+    data_record_all = xls_file.parse('record') 
+    data_record = data_record_all[data_record_all['工步类型'] == '恒流放电']   
+    x2_data = data_record[data_record['循环号'] == 2]   
+    x2 = x2_data[['容量(mAh)', '电压(V)']]
+    x50_data = data_record[data_record['循环号']== 10]
+    x50 = x50_data[['容量(mAh)', '电压(V)']]
+    x100_data = data_record[data_record['循环号']== 100]
+    x100 = x100_data[['容量(mAh)', '电压(V)']]
+    x150_data = data_record[data_record['循环号']== 150]
+    x150 = x150_data[['容量(mAh)', '电压(V)']]   
+    x200_data = data_record[data_record['循环号']== 200]
+    x200 = x200_data[['容量(mAh)', '电压(V)']]
+    x300_data = data_record[data_record['循环号']== 300]
+    x300 = x300_data[['容量(mAh)', '电压(V)']]  
+    print('--SES--', 'Drawing Voltage-Capacity curve finished!\n')
+    return [x2, x50, x100,x150,x200,x300], serial_num
+
+def curve_drawing(curve,serial_num):
+    n = [2,50,100,150,200,300]
+    fig, ax = plt.subplots()
+    
+    ax.set_title('Discharge Voltage', fontsize =16,)
+    ax.set_ylim([2.5,4.5]) 
+   
+    ax.set_xlabel('Capacity(mAh)', fontsize = 14)
+    ax.set_ylabel('Voltage(V)', fontsize = 14)    
+    ax.tick_params(axis='both',which='major',direction ='in',labelsize =11,reset = False)
+    
+    for i in range(len(curve)):
+        ax.plot(curve[i]['容量(mAh)'], curve[i]['电压(V)'], linewidth =2, label = n[i])
+        ax.legend(loc = 'best', frameon=False)
+    
+    plt.savefig(path_out + '\\' + serial_num + '  cycle curve.png')
+    
+def save_data(capacity_dis, capacity_chr, energy_dis, CE, Voltage_dis, retention_dis):
+    path =  path_out + '\\' + 'cycle data result.xlsx'           
+    with pd.ExcelWriter(path) as writer:
+        capacity_dis.to_excel(writer, sheet_name = '放电容量', index = False)   # no default index
+        capacity_chr.to_excel(writer, sheet_name = '充电容量', index = False)
+        energy_dis.to_excel(writer, sheet_name = '放电能量',index = False)
+        CE.to_excel(writer, sheet_name = 'CE', index = False)
+        Voltage_dis.to_excel(writer, sheet_name = '放电平台电压', index = False)
+        retention_dis.to_excel(writer, sheet_name = '容量保持率', index = False)
+    
+def merge_data(files):
+    cycle_num_l = []
+    capacity_dis_l = pd.DataFrame() 
+    capacity_chr_l = pd.DataFrame() 
+    energy_dis_l = pd.DataFrame() 
+    CE_l = pd.DataFrame() 
+    Voltage_dis_l = pd.DataFrame()
+    retention_dis_l = pd.DataFrame() 
+    for file in files:
+        data = get_data(file)           # get_data()
+        capacity_dis, capacity_chr, energy_dis, CE, Voltage_dis, cycle_num, retention_dis= data
+        if len(cycle_num) > len(cycle_num_l):
+            cycle_num_l = cycle_num
+        capacity_dis_l = pd.concat([capacity_dis_l, capacity_dis], axis = 1)    #axis = 1 for columns
+        capacity_chr_l = pd.concat([capacity_chr_l, capacity_chr], axis = 1)
+        energy_dis_l = pd.concat([energy_dis_l, energy_dis], axis = 1)
+        CE_l = pd.concat([CE_l, CE], axis = 1)
+        Voltage_dis_l = pd.concat([Voltage_dis_l, Voltage_dis], axis = 1)
+        retention_dis_l = pd.concat([retention_dis_l, retention_dis], axis = 1)        
+        curve, serial_num = get_curve(file)         # get_curve()
+        curve_drawing(curve, serial_num)            # curve_drawing()       
+    capacity_dis_n = pd.concat([cycle_num_l,capacity_dis_l], axis = 1)
+    capacity_chr_n = pd.concat([cycle_num_l,capacity_chr_l], axis = 1)
+    energy_dis_n = pd.concat([cycle_num_l,energy_dis_l], axis = 1)
+    CE_n = pd.concat([cycle_num_l,CE_l], axis = 1)
+    Voltage_dis_n = pd.concat([cycle_num_l,Voltage_dis_l], axis = 1)
+    retention_dis_n = pd.concat([cycle_num_l, retention_dis_l], axis = 1)
+    save_data(capacity_dis_n,capacity_chr_n, energy_dis_n, CE_n, Voltage_dis_n, retention_dis_n)        # save_data()
+    print('--SES--','Completed!')
+files = get_file(path_in)       # get_file()
+if files == []:
+    print('No excels for data analysis! Please add excles!')
+else:
+    merge_data(files)               # merge_data()
+
+        
+       
