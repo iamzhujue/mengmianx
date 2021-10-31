@@ -1,0 +1,16 @@
+# -*- coding: utf-8 -*-
+
+import time
+while(True):
+    ss = time.time()
+    local_time = time.localtime(ss)
+    str_time = time.strftime("%Y.%m.%d %H-%M-%S",local_time)
+    time.sleep(5)
+    print(str_time) 
+    
+    # ss = time.time() 获取当前时间戳
+    # locai_time = time.local_time(ss) 获取当前时间元组
+    # time.strf_time("%Y.%m.%d %H-%M-%S",local_time) 格式化时间
+    # time.sleep(secs) 推迟调用线程的运行，secs指秒数。
+    
+    # asc = time.asctime(local_time) 格式化的时间
