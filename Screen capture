@@ -1,0 +1,32 @@
+# -*- coding: utf-8 -*-
+
+import time
+from PIL import ImageGrab
+import os
+
+absPath = os.path.abspath('.')
+path = [x for x in os.listdir('.') if os.path.isdir(x)]
+if 'screen_path' in path:
+    screen_path = absPath + '\\' +'screen_path\\'
+else:
+    screen_path = os.path.join(absPath, 'screen_path\\')
+    os.mkdir(screen_path)
+
+def screen_shot():
+    ss = time.time()
+    local_time = time.localtime(ss)
+    str_time = time.strftime("%Y.%m.%d %H-%M-%S",local_time)
+    im = ImageGrab.grab()
+    print('已截屏,保存在',screen_path)
+    im.save(screen_path + str_time + '.png')
+    print('截屏分辨率为', im.size)
+while(True):
+    screen_shot()
+    print('waiting for 30s...')
+    time.sleep(10)
+    
+    
+    
+    
+    
+    
